@@ -12,6 +12,8 @@ def main(argv=None):
     p = sub.add_parser("project", help="classify with FuelDeep3D and write the four 2D projections")
     p.add_argument("las")
     p.add_argument("out_dir")
+    p.add_argument("--method", choices=["full", "fast"], default="full",
+                   help="full: TLS-SphereMap GPU features + projection; fast: CPU projection of the PNG channels only")
     p.add_argument("--fueldeep3d-dir", help="FuelDeep3D extdata/python directory")
     p.add_argument("--model", help="FuelDeep3D model checkpoint (default: bundled model)")
     p.add_argument("--res", type=float, default=0.2, help="angular resolution, degrees per pixel")
@@ -29,7 +31,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.command == "project":
         outputs = project_point_cloud(
-            args.las, args.out_dir,
+            args.las, args.out_dir, method=args.method,
             fueldeep3d_dir=args.fueldeep3d_dir, model_path=args.model,
             h_res=args.res, v_res=args.res, recenter=args.recenter, overwrite=args.overwrite,
         )

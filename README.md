@@ -19,17 +19,18 @@ in terrestrial lidar (TLS) point clouds.
 pip install -e .
 ```
 
-This also installs TLS-SphereMap from GitHub. Three things must be installed
+This also installs TLS-SphereMap (a work of Fei Zhang) from GitHub. Three things must be installed
 separately:
 
-- a CUDA build of `torch` (TLS-SphereMap's geometric features need a GPU);
+- `torch`, a CUDA build for `method="full"` (TLS-SphereMap's geometric
+  features need a GPU);
 - `open3d`;
 - the FuelDeep3D R package, whose PyTorch model is loaded from its
   `extdata/python` directory. Find that directory in R with
   `system.file("extdata", "python", package = "FuelDeep3D")` and pass it as
   `fueldeep3d_dir=` or set `PYNOTATION3D_FUELDEEP3D_DIR`.
 
-On Sherlock, torch and open3d come from modules:
+Users on the Stanford Sherlock cluster should load the following modules as such:
 
 ```bash
 ml devel python/3.12.1 math py-pytorch/2.4.1_py312 py-numpy/1.26.3_py312 \
@@ -56,14 +57,25 @@ result = backproject_annotation(
 Or from the shell (e.g. in a Slurm job):
 
 ```bash
-pynotation3d project 55-cropped.las outputs/55-cropped --recenter
+pynotation3d project 55-cropped.las outputs/55-cropped --recenter               # GPU, full cube
+pynotation3d project 55-cropped.las outputs/55-cropped --recenter --method fast # CPU, PNG channels only
 pynotation3d backproject 55-cropped_annotated.png outputs/55-cropped LAS-all-cropped-55
 ```
 
-`project` writes `pcd/<stem>_geom_feat.txt` and `<stem>_projection.json` next to
-the images; keep them, because `backproject` maps pixels back to exactly those
-points. Use `--recenter` for crops where the scanner is not at the coordinate
-origin.
+`project` has two methods:
+
+- `method="full"` (default, `--method full`): TLS-SphereMap's GPU geometric
+  features and projection. Writes its full 24-channel image cube (geometric
+  features, PCA/MNF/ICA) and `pcd/<stem>_geom_feat.txt`. Needs a GPU; can take
+  hours on a large scan.
+- `method="fast"` (`--method fast`): projects on CPU only the channels the four
+  PNGs need, with the same pixel rules as TLS-SphereMap. Writes
+  `pcd/<stem>_points.npz`. Takes minutes and needs no GPU (FuelDeep3D still
+  uses one if available).
+
+Either way, keep the points table and `<stem>_projection.json` next to the
+images: `backproject` maps pixels back to exactly those points. Use
+`--recenter` for crops where the scanner is not at the coordinate origin.
 
 ## Tests
 

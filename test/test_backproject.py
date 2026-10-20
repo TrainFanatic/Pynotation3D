@@ -73,6 +73,20 @@ def test_backproject_drop_void(tmp_path):
     assert len(laspy.read(result.las).points) == 2
 
 
+def test_backproject_reads_fast_points_table(tmp_path):
+    make_projection(tmp_path)
+    table = pd.read_csv(tmp_path / "pcd" / "s_geom_feat.txt")
+    npz = tmp_path / "pcd" / "s_points.npz"
+    np.savez(npz, **{c: table[c].to_numpy() for c in table.columns})
+    meta_path = tmp_path / "s_projection.json"
+    meta = json.loads(meta_path.read_text())
+    meta["outputs"] = {"out_dir": str(tmp_path), "points_table": str(npz)}
+    meta_path.write_text(json.dumps(meta))
+    make_annotation(tmp_path / "a.png")
+    result = backproject.backproject_annotation(tmp_path / "a.png", tmp_path, LABELS)
+    assert list(laspy.read(result.las).classification) == [1, 1, 0]
+
+
 def test_backproject_undoes_recentring(tmp_path):
     make_projection(tmp_path)
     meta_path = tmp_path / "s_projection.json"

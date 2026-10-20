@@ -32,6 +32,16 @@ def load_projection_metadata(projection):
     return json.loads(path.read_text())
 
 
+def load_points_table(meta):
+    """Load the projected points: TLS-SphereMap's ``*_geom_feat.txt`` or the fast method's ``*_points.npz``."""
+    outputs = meta["outputs"]
+    path = Path(outputs.get("points_table") or outputs["geom_feat"])
+    if path.suffix == ".npz":
+        with np.load(path) as data:
+            return pd.DataFrame({c: data[c] for c in _TABLE_COLUMNS})
+    return pd.read_csv(path, usecols=_TABLE_COLUMNS)
+
+
 def resolve_label_map(label_map):
     """Return ``{(r, g, b): class_id}`` from a TLS-SphereMap dataset name or a dict."""
     if isinstance(label_map, str):
@@ -45,7 +55,10 @@ def annotation_to_mask(image, color_to_index, tolerance=3):
     """Convert an annotated PNG to a class-ID mask.
 
     Colours match within ``tolerance`` per channel, as TLS-SphereMap's
-    ``convert_color_to_mask``. Unmatched and fully transparent pixels are void (0).
+    ``convert_color_to_mask``. Unmatched pixels are void (0), and so are fully
+    transparent ones whatever their RGB: transparent means unclassified, but
+    erased pixels often keep their old colour (TLS-SphereMap ignores alpha and
+    would count them as labelled).
     """
     rgba = np.asarray(image.convert("RGBA"))
     rgb = rgba[:, :, :3].astype(np.int16)
@@ -114,7 +127,7 @@ def backproject_annotation(annotation_png, projection, label_map, out_las=None, 
 
     # Same table and pixel mapping as the forward projection, so every point lands on its pixel.
     preprocess = _deps.tls_module("tools.preprocess_point_cloud")
-    table = pd.read_csv(meta["outputs"]["geom_feat"], usecols=_TABLE_COLUMNS)
+    table = load_points_table(meta)
     x_pix, y_pix = preprocess.map_angle_to_pixel(
         table["azimuth"].to_numpy(), table["elevation"].to_numpy(), canvas, tuple(meta["angular_res"])
     )
