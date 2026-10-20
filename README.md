@@ -3,6 +3,9 @@
 A library pipeline for annotating, processing, and segmenting subcanopy fuels
 in terrestrial lidar (TLS) point clouds.
 
+0. **Subplots** (`split_into_subplots`, `write_subplots`): split a large plot
+   into square subplots (10 x 10 m by default, height unlimited), each shifted
+   so its centre is at (0, 0).
 1. **Project** (`project_point_cloud`): classify a LAS point cloud with
    FuelDeep3D, then project it to 2D spherical images with
    [TLS-SphereMap](https://github.com/TrainFanatic/TLS-SphereMap): RGB, IRZ
@@ -41,7 +44,10 @@ source $GROUP_HOME/envs/pynotation3d/bin/activate
 ## Usage
 
 ```python
-from pynotation3d import project_point_cloud, backproject_annotation
+from pynotation3d import split_into_subplots, write_subplots, project_point_cloud, backproject_annotation
+
+subplots = split_into_subplots("55.las", size=10.0)  # or size=(10.0, 20.0)
+paths = write_subplots(subplots, "subplots/55", "55")  # 55_c<col>_r<row>.las + 55_subplots.json
 
 out = project_point_cloud("55-cropped.las", "outputs/55-cropped", recenter=True)
 # out.rgb_png, out.irz_png, out.exists_png, out.classification_png
@@ -57,10 +63,17 @@ result = backproject_annotation(
 Or from the shell (e.g. in a Slurm job):
 
 ```bash
+pynotation3d subplots 55.las subplots/55 --size 10                               # 10 x 10 m tiles
 pynotation3d project 55-cropped.las outputs/55-cropped --recenter               # GPU, full cube
 pynotation3d project 55-cropped.las outputs/55-cropped --recenter --method fast # CPU, PNG channels only
 pynotation3d backproject 55-cropped_annotated.png outputs/55-cropped LAS-all-cropped-55
 ```
+
+Subplots are already centred, so project them without `--recenter`. Each
+point goes to exactly one subplot. The grid starts at the cloud's X/Y minimum
+unless `origin=` / `--origin` is given. `<stem>_subplots.json` records each
+subplot's bounds and the centre subtracted from X/Y; add it back to return to
+the original coordinates.
 
 `project` has two methods:
 

@@ -1,13 +1,24 @@
-"""Command line: ``pynotation3d project`` and ``pynotation3d backproject``."""
+"""Command line: ``pynotation3d subplots``, ``project`` and ``backproject``."""
 import argparse
+from pathlib import Path
 
 from .backproject import backproject_annotation
 from .project import project_point_cloud
+from .subplots import split_into_subplots, write_subplots
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="pynotation3d")
     sub = parser.add_subparsers(dest="command", required=True)
+
+    s = sub.add_parser("subplots", help="split a LAS into square subplots, each centred on (0, 0)")
+    s.add_argument("las")
+    s.add_argument("out_dir")
+    s.add_argument("--size", type=float, nargs="+", default=[10.0], metavar="M",
+                   help="tile side in metres, or X and Y sides (default: 10)")
+    s.add_argument("--origin", type=float, nargs=2, metavar=("X", "Y"),
+                   help="grid corner (default: the cloud's X/Y minimum)")
+    s.add_argument("--min-points", type=int, default=1, help="leave out tiles with fewer points")
 
     p = sub.add_parser("project", help="classify with FuelDeep3D and write the four 2D projections")
     p.add_argument("las")
@@ -29,7 +40,14 @@ def main(argv=None):
     b.add_argument("--drop-void", action="store_true")
 
     args = parser.parse_args(argv)
-    if args.command == "project":
+    if args.command == "subplots":
+        if len(args.size) not in (1, 2):
+            parser.error("--size takes one or two values")
+        size = args.size[0] if len(args.size) == 1 else tuple(args.size)
+        subplots = split_into_subplots(args.las, size, origin=args.origin, min_points=args.min_points)
+        paths = write_subplots(subplots, args.out_dir, Path(args.las).stem)
+        print(f"Wrote {len(paths)} subplots to {args.out_dir}")
+    elif args.command == "project":
         outputs = project_point_cloud(
             args.las, args.out_dir, method=args.method,
             fueldeep3d_dir=args.fueldeep3d_dir, model_path=args.model,

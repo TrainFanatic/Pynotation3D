@@ -1,1 +1,1 @@
-Make github repo
+Subplots: recognize the ground height and set the Z origin there as well (so Z = 0 at the ground, not only X/Y = 0 at the tile centre)
