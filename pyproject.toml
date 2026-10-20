@@ -10,14 +10,39 @@ authors = [
 ]
 description = "A library pipeline for annotating, processing, and segmenting subcanopy fuels"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
 license = "MIT"
 license-files = ["LICEN[CS]E*"]
+# Also needed, installed separately: a CUDA build of torch (GPU geometric
+# features and FuelDeep3D), open3d (imported by TLS-SphereMap's projection),
+# and the FuelDeep3D R package, whose extdata/python model is loaded at runtime.
+dependencies = [
+    "numpy",
+    "pandas>=2.2",
+    "laspy",
+    "pillow",
+    "pyyaml",
+    "scikit-learn",
+    "tls-spheremap @ git+https://github.com/TrainFanatic/TLS-SphereMap",
+]
 
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+pynotation3d = "pynotation3d.cli:main"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+
+# TODO: replace with the Pynotation3D GitHub repository once it exists.
 [project.urls]
 Homepage = "https://github.com/pypa/sampleproject"
 Issues = "https://github.com/pypa/sampleproject/issues"
